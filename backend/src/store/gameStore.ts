@@ -1,29 +1,98 @@
-export type Phase = 'lobby' | 'profiles' | 'trivia' | 'group' | 'final';
+export type Phase = 'lobby' | 'trivia' | 'final';
+
+export type ProfileKey = 'field' | 'stage' | 'style' | 'approach' | 'energizer';
+
+export interface ProfileOption {
+  id: string;
+  label: string;
+  emoji: string;
+}
+
+export interface ProfileQuestion {
+  key: ProfileKey;
+  prompt: string;
+  options: ProfileOption[];
+}
+
+export const PROFILE_QUESTIONS: ProfileQuestion[] = [
+  {
+    key: 'field',
+    prompt: 'What field are you in?',
+    options: [
+      { id: 'tech', label: 'Tech / Engineering', emoji: '💻' },
+      { id: 'business', label: 'Business / Consulting', emoji: '💼' },
+      { id: 'finance', label: 'Finance', emoji: '💰' },
+      { id: 'healthcare', label: 'Healthcare', emoji: '🏥' },
+      { id: 'creative', label: 'Creative / Design', emoji: '🎨' },
+      { id: 'education', label: 'Education', emoji: '📚' },
+      { id: 'marketing', label: 'Marketing / Sales', emoji: '📣' },
+      { id: 'science', label: 'Science / Research', emoji: '🔬' }
+    ]
+  },
+  {
+    key: 'stage',
+    prompt: 'Where are you in your career?',
+    options: [
+      { id: 'student', label: 'Student / Learning', emoji: '🌱' },
+      { id: 'early', label: 'Early Career (0-2 yrs)', emoji: '🚀' },
+      { id: 'mid', label: 'Mid-Career (3-7 yrs)', emoji: '📈' },
+      { id: 'senior', label: 'Senior (8+ yrs)', emoji: '🏆' },
+      { id: 'founder', label: 'Leader / Founder', emoji: '👑' }
+    ]
+  },
+  {
+    key: 'style',
+    prompt: 'What is your working style?',
+    options: [
+      { id: 'collaborator', label: 'Collaborator — I thrive in teams', emoji: '🤝' },
+      { id: 'strategist', label: 'Strategist — I love planning ahead', emoji: '🧠' },
+      { id: 'doer', label: 'Doer — Just ship it', emoji: '⚡' },
+      { id: 'specialist', label: 'Specialist — Deep expertise', emoji: '🎯' },
+      { id: 'connector', label: 'Connector — I bridge teams', emoji: '🌐' }
+    ]
+  },
+  {
+    key: 'approach',
+    prompt: 'How do you tackle problems?',
+    options: [
+      { id: 'data', label: 'Data-driven — Numbers tell the story', emoji: '📊' },
+      { id: 'creative', label: 'Creative — Try wild ideas', emoji: '💡' },
+      { id: 'iterative', label: 'Iterative — Test, learn, repeat', emoji: '🔄' },
+      { id: 'analytical', label: 'Analytical — Break it down', emoji: '🤔' }
+    ]
+  },
+  {
+    key: 'energizer',
+    prompt: 'What energizes you most at work?',
+    options: [
+      { id: 'building', label: 'Building things', emoji: '🛠️' },
+      { id: 'helping', label: 'Helping people', emoji: '🤝' },
+      { id: 'growing', label: 'Growing things', emoji: '📈' },
+      { id: 'solving', label: 'Solving puzzles', emoji: '🧩' },
+      { id: 'sharing', label: 'Sharing ideas', emoji: '🎤' }
+    ]
+  }
+];
 
 export interface Player {
   id: string;
   name: string;
   emoji: string;
-  role?: string;
-  hobby?: string;
-  funFact?: string;
+  field?: string;
+  stage?: string;
+  style?: string;
+  approach?: string;
+  energizer?: string;
   score: number;
-  groupId?: string;
 }
 
 export interface TriviaQuestion {
   id: string;
-  category: 'role' | 'hobby' | 'funFact';
+  category: ProfileKey;
   prompt: string;
   correctPlayerId: string;
-  options: string[]; // player IDs (4 of them)
-  answers: Record<string, { playerId: string; answeredAt: number }>; // submitterId -> answer
-}
-
-export interface GroupChallenge {
-  id: string;
-  prompt: string;
-  groups: Record<string, { memberIds: string[]; answer?: string; submittedAt?: number }>;
+  options: string[]; // player IDs
+  answers: Record<string, { playerId: string; answeredAt: number }>;
 }
 
 export interface Game {
@@ -34,13 +103,11 @@ export interface Game {
   questions: TriviaQuestion[];
   currentQuestionIndex: number;
   questionStartedAt?: number;
-  groupChallenge?: GroupChallenge;
   createdAt: number;
 }
 
 const games = new Map<string, Game>();
 
-// Mario 3 themed avatars (mushroom, star, coin, fire flower, leaf, Tanooki, etc.)
 const EMOJIS = ['🍄', '⭐', '🪙', '🌸', '🍃', '👑', '🐢', '🦔', '🐲', '🍌', '🔥', '💎', '🎩', '🥾', '🪶', '🌟', '🌷', '🍀', '🐸', '🦕'];
 
 const QUESTION_DURATION_MS = 20_000;
@@ -100,13 +167,15 @@ export function addPlayer(game: Game, name: string): Player {
 export function setProfile(
   game: Game,
   playerId: string,
-  data: { role: string; hobby: string; funFact: string }
+  data: { field: string; stage: string; style: string; approach: string; energizer: string }
 ) {
   const player = game.players[playerId];
   if (!player) throw new Error('Player not found');
-  player.role = data.role.trim().slice(0, 60);
-  player.hobby = data.hobby.trim().slice(0, 60);
-  player.funFact = data.funFact.trim().slice(0, 100);
+  player.field = data.field;
+  player.stage = data.stage;
+  player.style = data.style;
+  player.approach = data.approach;
+  player.energizer = data.energizer;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -118,18 +187,29 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+function findOption(key: ProfileKey, id: string): ProfileOption | undefined {
+  return PROFILE_QUESTIONS.find((q) => q.key === key)?.options.find((o) => o.id === id);
+}
+
+function profileLabel(key: ProfileKey, id?: string): string {
+  if (!id) return '';
+  const opt = findOption(key, id);
+  return opt ? `${opt.emoji} ${opt.label}` : id;
+}
+
 export function buildTriviaQuestions(game: Game): TriviaQuestion[] {
   const players = Object.values(game.players).filter(
-    (p) => p.role && p.hobby && p.funFact
+    (p) => p.field && p.stage && p.style && p.approach && p.energizer
   );
   if (players.length < 2) return [];
 
-  const categories: Array<'role' | 'hobby' | 'funFact'> = ['hobby', 'funFact', 'role', 'hobby', 'funFact'];
+  // Cycle through all 5 categories so each category appears
+  const order: ProfileKey[] = ['field', 'style', 'energizer', 'approach', 'stage'];
   const questions: TriviaQuestion[] = [];
   const usedPlayerIds = new Set<string>();
 
   for (let i = 0; i < Math.min(5, players.length * 2); i++) {
-    const cat = categories[i % categories.length];
+    const cat = order[i % order.length];
     let candidates = players.filter((p) => !usedPlayerIds.has(p.id));
     if (candidates.length === 0) {
       usedPlayerIds.clear();
@@ -142,10 +222,13 @@ export function buildTriviaQuestions(game: Game): TriviaQuestion[] {
     const distractors = shuffle(distractorPool).slice(0, 3);
     const options = shuffle([correct.id, ...distractors.map((d) => d.id)]);
 
-    const prompts = {
-      hobby: `Whose hobby is "${correct.hobby}"?`,
-      funFact: `Who shared this fun fact: "${correct.funFact}"?`,
-      role: `Who works as a "${correct.role}"?`
+    const value = profileLabel(cat, (correct as any)[cat]);
+    const prompts: Record<ProfileKey, string> = {
+      field: `Who works in ${value}?`,
+      stage: `Whose career stage is ${value}?`,
+      style: `Whose working style is "${value}"?`,
+      approach: `Who tackles problems with: ${value}?`,
+      energizer: `Who is most energized by: ${value}?`
     };
 
     questions.push({
@@ -161,7 +244,9 @@ export function buildTriviaQuestions(game: Game): TriviaQuestion[] {
 }
 
 export function startGame(game: Game) {
-  const ready = Object.values(game.players).filter((p) => p.role && p.hobby && p.funFact);
+  const ready = Object.values(game.players).filter(
+    (p) => p.field && p.stage && p.style && p.approach && p.energizer
+  );
   if (ready.length < 2) throw new Error('Need at least 2 players with completed profiles');
   game.questions = buildTriviaQuestions(game);
   game.currentQuestionIndex = 0;
@@ -173,7 +258,7 @@ export function submitAnswer(game: Game, playerId: string, answerPlayerId: strin
   if (game.phase !== 'trivia') throw new Error('Not in trivia phase');
   const q = game.questions[game.currentQuestionIndex];
   if (!q) throw new Error('No active question');
-  if (q.answers[playerId]) return; // already answered, ignore
+  if (q.answers[playerId]) return;
   q.answers[playerId] = { playerId: answerPlayerId, answeredAt: Date.now() };
 
   if (answerPlayerId === q.correctPlayerId) {
@@ -190,77 +275,51 @@ export function nextQuestion(game: Game) {
     game.currentQuestionIndex += 1;
     game.questionStartedAt = Date.now();
   } else {
-    startGroupChallenge(game);
+    game.phase = 'final';
   }
-}
-
-const GROUP_PROMPTS = [
-  "BOWSER has stolen all your group's hobbies! Combine everyone's hobby into ONE Mario-style power-up. Name it and describe what it does.",
-  "Your group must design a new World for Mario 3, themed after every team member's job/role. Name the World and describe one level.",
-  "Pick ONE fun fact from each person in your group and weave them into a 3-sentence Mario adventure story.",
-  "Your group has been turned into Koopalings. Each person picks a magic-wand power based on their hobby. Present them!",
-  "Princess Peach is throwing a party. Plan the menu and entertainment using everyone's interests. Pitch the party in 30 seconds."
-];
-
-export function startGroupChallenge(game: Game) {
-  const playerIds = Object.values(game.players)
-    .filter((p) => p.role && p.hobby)
-    .map((p) => p.id);
-  const shuffled = shuffle(playerIds);
-  const numGroups = Math.max(2, Math.min(3, Math.ceil(shuffled.length / 3)));
-  const groups: Record<string, { memberIds: string[]; answer?: string }> = {};
-  const groupNames = ['World 1: Grass Land', 'World 2: Desert Land', 'World 3: Water Land'];
-  for (let i = 0; i < numGroups; i++) {
-    groups[groupNames[i]] = { memberIds: [] };
-  }
-  shuffled.forEach((pid, idx) => {
-    const groupName = groupNames[idx % numGroups];
-    groups[groupName].memberIds.push(pid);
-    game.players[pid].groupId = groupName;
-  });
-
-  const prompt = GROUP_PROMPTS[Math.floor(Math.random() * GROUP_PROMPTS.length)];
-  game.groupChallenge = {
-    id: 'g1',
-    prompt,
-    groups
-  };
-  game.phase = 'group';
-}
-
-export function submitGroupAnswer(game: Game, playerId: string, answer: string) {
-  if (!game.groupChallenge) throw new Error('No group challenge');
-  const player = game.players[playerId];
-  if (!player?.groupId) throw new Error('No group assigned');
-  const group = game.groupChallenge.groups[player.groupId];
-  if (!group) throw new Error('Group not found');
-  group.answer = answer.trim().slice(0, 500);
-  group.submittedAt = Date.now();
-  // bonus points for the whole group
-  const BONUS = 500;
-  group.memberIds.forEach((mid) => {
-    game.players[mid].score += BONUS;
-  });
 }
 
 export function finalizeGame(game: Game) {
   game.phase = 'final';
 }
 
+function alignmentMatches(player: Player, others: Player[]) {
+  const keys: ProfileKey[] = ['field', 'stage', 'style', 'approach', 'energizer'];
+  const matches: Array<{ name: string; emoji: string; sharedKeys: ProfileKey[] }> = [];
+  for (const o of others) {
+    const shared: ProfileKey[] = [];
+    for (const k of keys) {
+      if ((player as any)[k] && (player as any)[k] === (o as any)[k]) shared.push(k);
+    }
+    if (shared.length > 0) {
+      matches.push({ name: o.name, emoji: o.emoji, sharedKeys: shared });
+    }
+  }
+  return matches.sort((a, b) => b.sharedKeys.length - a.sharedKeys.length);
+}
+
 export function publicGameState(game: Game) {
   const currentQ = game.questions[game.currentQuestionIndex];
   const elapsedMs = game.questionStartedAt ? Date.now() - game.questionStartedAt : 0;
   const remainingMs = Math.max(0, QUESTION_DURATION_MS - elapsedMs);
+  const allPlayers = Object.values(game.players);
+
   return {
     code: game.code,
     phase: game.phase,
-    players: Object.values(game.players).map((p) => ({
+    players: allPlayers.map((p) => ({
       id: p.id,
       name: p.name,
       emoji: p.emoji,
       score: p.score,
-      hasProfile: !!(p.role && p.hobby && p.funFact),
-      groupId: p.groupId
+      hasProfile: !!(p.field && p.stage && p.style && p.approach && p.energizer),
+      profile: {
+        field: p.field ? findOption('field', p.field) : null,
+        stage: p.stage ? findOption('stage', p.stage) : null,
+        style: p.style ? findOption('style', p.style) : null,
+        approach: p.approach ? findOption('approach', p.approach) : null,
+        energizer: p.energizer ? findOption('energizer', p.energizer) : null
+      }
     })),
     currentQuestion: currentQ
       ? {
@@ -277,21 +336,7 @@ export function publicGameState(game: Game) {
         }
       : null,
     questionIndex: game.currentQuestionIndex,
-    totalQuestions: game.questions.length,
-    groupChallenge: game.groupChallenge
-      ? {
-          prompt: game.groupChallenge.prompt,
-          groups: Object.entries(game.groupChallenge.groups).map(([name, g]) => ({
-            name,
-            members: g.memberIds.map((mid) => ({
-              name: game.players[mid].name,
-              emoji: game.players[mid].emoji
-            })),
-            submitted: !!g.answer,
-            answer: g.answer
-          }))
-        }
-      : null
+    totalQuestions: game.questions.length
   };
 }
 
@@ -310,6 +355,13 @@ export function lastQuestionResult(game: Game) {
       correct: a.playerId === q.correctPlayerId
     }))
   };
+}
+
+export function alignmentReport(game: Game, playerId: string) {
+  const me = game.players[playerId];
+  if (!me) return null;
+  const others = Object.values(game.players).filter((p) => p.id !== playerId);
+  return alignmentMatches(me, others);
 }
 
 export const constants = {

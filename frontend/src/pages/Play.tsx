@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { route } from 'preact-router';
-import { api } from '../utils/api';
+import { api, ProfileQuestion } from '../utils/api';
 import { saveSession, loadSession } from '../utils/storage';
 import { usePoll } from '../utils/usePoll';
 import { Clouds } from '../components/Clouds';
@@ -13,7 +12,6 @@ export function Play() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const sess = loadSession();
@@ -26,7 +24,6 @@ export function Play() {
 
   const game = usePoll(() => (code && playerId ? api.getGame(code) : Promise.resolve(null)), 1500);
 
-  // Not joined yet → show join form
   if (!playerId) {
     return (
       <JoinForm
@@ -42,16 +39,13 @@ export function Play() {
     );
   }
 
-  if (!game) {
-    return <Loading />;
-  }
+  if (!game) return <Loading />;
 
   const me = game.players.find((p: any) => p.id === playerId);
 
   if (game.phase === 'lobby') return <ProfileForm game={game} playerId={playerId} me={me} />;
   if (game.phase === 'trivia') return <TriviaPlay game={game} playerId={playerId} />;
-  if (game.phase === 'group') return <GroupPlay game={game} playerId={playerId} />;
-  if (game.phase === 'final') return <FinalPlay game={game} me={me} />;
+  if (game.phase === 'final') return <FinalPlay game={game} me={me} code={code} playerId={playerId} />;
   return null;
 }
 
@@ -105,7 +99,7 @@ function JoinForm({ code, setCode, onJoin }: any) {
             <label class="block text-sm font-bold text-gray-700 mb-2">Your Name</label>
             <input
               class="input-mario"
-              placeholder="e.g. Mario"
+              placeholder="e.g. Manny"
               maxLength={20}
               value={name}
               onInput={(e: any) => setName(e.target.value)}
@@ -126,24 +120,43 @@ function JoinForm({ code, setCode, onJoin }: any) {
 }
 
 function ProfileForm({ game, playerId, me }: any) {
-  const [role, setRole] = useState('');
-  const [hobby, setHobby] = useState('');
-  const [funFact, setFunFact] = useState('');
+  const [questions, setQuestions] = useState<ProfileQuestion[] | null>(null);
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    api.getProfileQuestions().then(setQuestions).catch((e) => setErr(e.message));
+  }, []);
+
+  useEffect(() => {
     if (me?.hasProfile) setSubmitted(true);
   }, [me?.hasProfile]);
 
-  const submit = async (e: Event) => {
-    e.preventDefault();
-    if (!role.trim() || !hobby.trim() || !funFact.trim()) return;
+  const pickOption = (key: string, optionId: string) => {
+    const next = { ...answers, [key]: optionId };
+    setAnswers(next);
+    if (questions && step < questions.length - 1) {
+      setStep(step + 1);
+    } else if (questions) {
+      submit(next);
+    }
+  };
+
+  const submit = async (final: Record<string, string>) => {
     setBusy(true);
     setErr(null);
     try {
-      await api.setProfile(game.code, { playerId, role, hobby, funFact });
+      await api.setProfile(game.code, {
+        playerId,
+        field: final.field,
+        stage: final.stage,
+        style: final.style,
+        approach: final.approach,
+        energizer: final.energizer
+      });
       setSubmitted(true);
     } catch (e: any) {
       setErr(e.message);
@@ -173,60 +186,54 @@ function ProfileForm({ game, playerId, me }: any) {
     );
   }
 
+  if (!questions) return <Loading />;
+
+  const q = questions[step];
+  const colors = ['btn-mario', 'btn-blue', 'btn-yellow', 'btn-green'];
+
   return (
     <div class="relative min-h-screen overflow-hidden">
       <Clouds />
       <div class="relative z-10 px-4 py-6 max-w-md mx-auto">
-        <div class="text-center mb-4">
-          <div class="text-5xl">{me?.emoji}</div>
-          <h2 class="pixel text-lg text-white" style={{ textShadow: '2px 2px 0 #000' }}>
-            HI, {me?.name?.toUpperCase()}!
-          </h2>
-        </div>
-        <form onSubmit={submit} class="card p-5 space-y-4">
-          <p class="text-sm text-gray-700 font-bold text-center">
-            Tell us about you so others can guess later 🍄
+        <div class="text-center mb-3">
+          <div class="text-4xl">{me?.emoji}</div>
+          <p class="pixel text-xs text-white" style={{ textShadow: '2px 2px 0 #000' }}>
+            {me?.name?.toUpperCase()} · STEP {step + 1}/{questions.length}
           </p>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">YOUR ROLE / JOB</label>
-            <input
-              class="input-mario"
-              placeholder="e.g. Software Engineer"
-              maxLength={60}
-              value={role}
-              onInput={(e: any) => setRole(e.target.value)}
-            />
+        </div>
+
+        <div class="card p-5 mb-4">
+          <p class="text-base font-bold text-brand-dark text-center">{q.prompt}</p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3">
+          {q.options.map((opt, idx) => (
+            <button
+              key={opt.id}
+              type="button"
+              class={`btn-mario ${colors[idx % colors.length]} text-left flex items-center gap-3`}
+              onClick={() => pickOption(q.key, opt.id)}
+              disabled={busy}
+            >
+              <span class="text-3xl">{opt.emoji}</span>
+              <span class="text-sm">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {err && <p class="text-red-200 text-sm mt-3 text-center" style={{ textShadow: '1px 1px 0 #000' }}>{err}</p>}
+
+        {step > 0 && (
+          <div class="text-center mt-4">
+            <button
+              class="text-white pixel text-xs underline opacity-80"
+              onClick={() => setStep(step - 1)}
+              style={{ textShadow: '1px 1px 0 #000' }}
+            >
+              ← BACK
+            </button>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">A HOBBY / INTEREST</label>
-            <input
-              class="input-mario"
-              placeholder="e.g. Salsa dancing"
-              maxLength={60}
-              value={hobby}
-              onInput={(e: any) => setHobby(e.target.value)}
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">A FUN FACT ABOUT YOU</label>
-            <textarea
-              class="input-mario"
-              rows={3}
-              placeholder="e.g. I once met a real-life raccoon named Tanooki"
-              maxLength={100}
-              value={funFact}
-              onInput={(e: any) => setFunFact(e.target.value)}
-            />
-          </div>
-          {err && <p class="text-red-600 text-sm">{err}</p>}
-          <button
-            type="submit"
-            class="btn-mario btn-green w-full"
-            disabled={busy || !role.trim() || !hobby.trim() || !funFact.trim()}
-          >
-            {busy ? '...' : '⭐ SUBMIT PROFILE'}
-          </button>
-        </form>
+        )}
       </div>
     </div>
   );
@@ -303,92 +310,28 @@ function TriviaPlay({ game, playerId }: any) {
   );
 }
 
-function GroupPlay({ game, playerId }: any) {
-  const me = game.players.find((p: any) => p.id === playerId);
-  const myGroup = game.groupChallenge?.groups.find((g: any) => g.name === me?.groupId);
-  const [answer, setAnswer] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const submit = async (e: Event) => {
-    e.preventDefault();
-    if (!answer.trim() || busy) return;
-    setBusy(true);
-    try {
-      await api.submitGroupAnswer(game.code, playerId, answer);
-    } catch (e: any) {
-      setErr(e.message);
-      setBusy(false);
-    }
-  };
-
-  if (!game.groupChallenge || !myGroup) return <Loading />;
-
-  return (
-    <div class="relative min-h-screen overflow-hidden">
-      <Clouds />
-      <div class="relative z-10 px-4 py-6 max-w-md mx-auto">
-        <h1 class="pixel text-lg text-yellow-300 text-center mb-3" style={{ textShadow: '2px 2px 0 #000' }}>
-          🚩 GROUP CHALLENGE 🚩
-        </h1>
-        <div class="card p-4 mb-4">
-          <p class="pixel text-xs text-brand-dark mb-2">YOU'RE ON:</p>
-          <p class="pixel text-sm text-center bg-yellow-100 py-2 rounded mb-3">{myGroup.name}</p>
-          <div class="flex flex-wrap gap-2 justify-center mb-3">
-            {myGroup.members.map((m: any, i: number) => (
-              <span key={i} class="bg-blue-50 border-2 border-blue-300 rounded px-2 py-1 text-sm">
-                {m.emoji} {m.name}
-              </span>
-            ))}
-          </div>
-          <p class="pixel text-xs text-gray-700 mb-2">MISSION:</p>
-          <p class="text-base font-bold text-brand-dark">{game.groupChallenge.prompt}</p>
-        </div>
-
-        {myGroup.submitted ? (
-          <div class="card p-5 text-center">
-            <div class="text-5xl mb-2 float">⭐</div>
-            <p class="pixel text-base text-green-700 mb-2">SUBMITTED!</p>
-            <p class="text-sm text-gray-700 italic">"{myGroup.answer}"</p>
-            <p class="text-xs text-gray-500 mt-3">+500 🪙 for the whole team!</p>
-          </div>
-        ) : (
-          <form onSubmit={submit} class="card p-4 space-y-3">
-            <p class="text-xs text-gray-700">
-              💡 Talk it out with your team in real life! Pick someone to type the final answer:
-            </p>
-            <textarea
-              class="input-mario"
-              rows={4}
-              placeholder="Your team's answer..."
-              maxLength={500}
-              value={answer}
-              onInput={(e: any) => setAnswer(e.target.value)}
-            />
-            {err && <p class="text-red-600 text-sm">{err}</p>}
-            <button
-              type="submit"
-              class="btn-mario btn-green w-full"
-              disabled={busy || !answer.trim()}
-            >
-              {busy ? '...' : '⭐ SUBMIT FOR TEAM'}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function FinalPlay({ game, me }: any) {
+function FinalPlay({ game, me, code, playerId }: any) {
   const sorted = [...game.players].sort((a, b) => b.score - a.score);
   const myRank = sorted.findIndex((p: any) => p.id === me?.id) + 1;
+  const [matches, setMatches] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.getAlignment(code, playerId).then(setMatches).catch(() => {});
+  }, [code, playerId]);
+
+  const labelFor = (k: string) => ({
+    field: 'Field',
+    stage: 'Career stage',
+    style: 'Working style',
+    approach: 'Problem approach',
+    energizer: 'What energizes us'
+  } as any)[k] || k;
 
   return (
     <div class="relative min-h-screen overflow-hidden">
       <Clouds />
-      <div class="relative z-10 px-4 py-6 max-w-md mx-auto">
-        <div class="text-center mb-4">
+      <div class="relative z-10 px-4 py-6 max-w-md mx-auto space-y-4">
+        <div class="text-center">
           <div class="text-6xl float mb-2">{myRank === 1 ? '👑' : '🍄'}</div>
           <h1 class="pixel text-xl text-yellow-300 mb-1" style={{ textShadow: '3px 3px 0 #000' }}>
             COURSE CLEAR!
@@ -398,11 +341,34 @@ function FinalPlay({ game, me }: any) {
           </p>
         </div>
 
-        <div class="card p-5 text-center mb-4">
+        <div class="card p-5 text-center">
           <div class="text-5xl mb-2">{me?.emoji}</div>
           <p class="text-2xl font-bold mb-1">{me?.name}</p>
           <p class="pixel text-2xl coin-glow">🪙 {me?.score}</p>
         </div>
+
+        {matches.length > 0 && (
+          <div class="card p-4">
+            <h3 class="pixel text-sm text-brand-dark mb-3 text-center">🤝 YOUR PEOPLE</h3>
+            <div class="space-y-2">
+              {matches.slice(0, 5).map((m, i) => (
+                <div key={i} class="border-2 border-blue-300 bg-blue-50 rounded p-2">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-2xl">{m.emoji}</span>
+                    <span class="font-bold text-sm flex-1">{m.name}</span>
+                    <span class="pixel text-xs text-blue-700">{m.sharedKeys.length} match{m.sharedKeys.length !== 1 ? 'es' : ''}</span>
+                  </div>
+                  <p class="text-xs text-gray-700 ml-9">
+                    Shared: {m.sharedKeys.map(labelFor).join(' · ')}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p class="text-center text-xs text-gray-500 italic mt-3">
+              Go say hi! 👋
+            </p>
+          </div>
+        )}
 
         <div class="card p-4">
           <h3 class="pixel text-sm text-brand-dark mb-3 text-center">FINAL STANDINGS</h3>

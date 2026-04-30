@@ -58,7 +58,6 @@ export function Host() {
 
   if (game.phase === 'lobby') return <HostLobby game={game} qrUrl={qrUrl} hostId={hostId!} />;
   if (game.phase === 'trivia') return <HostTrivia game={game} hostId={hostId!} />;
-  if (game.phase === 'group') return <HostGroup game={game} hostId={hostId!} />;
   if (game.phase === 'final') return <HostFinal game={game} />;
   return null;
 }
@@ -218,7 +217,7 @@ function HostTrivia({ game, hostId }: any) {
         {showResult && (
           <div class="text-center">
             <button class="btn-mario btn-green text-xl" onClick={next}>
-              {game.questionIndex + 1 < game.totalQuestions ? '▶ NEXT QUESTION' : '🚩 GROUP CHALLENGE'}
+              {game.questionIndex + 1 < game.totalQuestions ? '▶ NEXT QUESTION' : '🏆 SHOW FINAL SCORES'}
             </button>
           </div>
         )}

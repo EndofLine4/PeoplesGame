@@ -7,14 +7,19 @@ import {
   startGame,
   submitAnswer,
   nextQuestion,
-  submitGroupAnswer,
   finalizeGame,
   publicGameState,
   lastQuestionResult,
-  generatePlayerId
+  alignmentReport,
+  generatePlayerId,
+  PROFILE_QUESTIONS
 } from '../store/gameStore.js';
 
 const router = Router();
+
+router.get('/profile-questions', (_req, res) => {
+  res.json(PROFILE_QUESTIONS);
+});
 
 router.post('/', (req, res) => {
   const hostId = generatePlayerId();
@@ -41,12 +46,12 @@ router.post('/:code/join', (req, res) => {
 router.post('/:code/profile', (req, res) => {
   const game = getGame(req.params.code);
   if (!game) return res.status(404).json({ error: 'Game not found' });
-  const { playerId, role, hobby, funFact } = req.body || {};
-  if (!playerId || !role || !hobby || !funFact) {
-    return res.status(400).json({ error: 'All profile fields required' });
+  const { playerId, field, stage, style, approach, energizer } = req.body || {};
+  if (!playerId || !field || !stage || !style || !approach || !energizer) {
+    return res.status(400).json({ error: 'All 5 profile answers required' });
   }
   try {
-    setProfile(game, playerId, { role, hobby, funFact });
+    setProfile(game, playerId, { field, stage, style, approach, energizer });
     res.json({ ok: true });
   } catch (e: any) {
     res.status(400).json({ error: e.message });
@@ -94,17 +99,10 @@ router.get('/:code/result', (req, res) => {
   res.json(lastQuestionResult(game));
 });
 
-router.post('/:code/group-answer', (req, res) => {
+router.get('/:code/alignment/:playerId', (req, res) => {
   const game = getGame(req.params.code);
   if (!game) return res.status(404).json({ error: 'Game not found' });
-  const { playerId, answer } = req.body || {};
-  if (!playerId || !answer) return res.status(400).json({ error: 'Missing fields' });
-  try {
-    submitGroupAnswer(game, playerId, answer);
-    res.json({ ok: true });
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
+  res.json(alignmentReport(game, req.params.playerId) || []);
 });
 
 router.post('/:code/finalize', (req, res) => {

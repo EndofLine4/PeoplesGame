@@ -15,15 +15,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export interface ProfileOption { id: string; label: string; emoji: string; }
+export interface ProfileQuestion { key: string; prompt: string; options: ProfileOption[]; }
+
 export const api = {
   createGame: () => request<{ code: string; hostId: string }>('/api/games', { method: 'POST' }),
   getGame: (code: string) => request<any>(`/api/games/${code}`),
+  getProfileQuestions: () => request<ProfileQuestion[]>('/api/games/profile-questions'),
   joinGame: (code: string, name: string) =>
     request<{ playerId: string; name: string; emoji: string }>(`/api/games/${code}/join`, {
       method: 'POST',
       body: JSON.stringify({ name })
     }),
-  setProfile: (code: string, payload: { playerId: string; role: string; hobby: string; funFact: string }) =>
+  setProfile: (
+    code: string,
+    payload: { playerId: string; field: string; stage: string; style: string; approach: string; energizer: string }
+  ) =>
     request<{ ok: boolean }>(`/api/games/${code}/profile`, {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -44,11 +51,8 @@ export const api = {
       body: JSON.stringify({ hostId })
     }),
   getResult: (code: string) => request<any>(`/api/games/${code}/result`),
-  submitGroupAnswer: (code: string, playerId: string, answer: string) =>
-    request<{ ok: boolean }>(`/api/games/${code}/group-answer`, {
-      method: 'POST',
-      body: JSON.stringify({ playerId, answer })
-    }),
+  getAlignment: (code: string, playerId: string) =>
+    request<Array<{ name: string; emoji: string; sharedKeys: string[] }>>(`/api/games/${code}/alignment/${playerId}`),
   finalize: (code: string, hostId: string) =>
     request<{ ok: boolean }>(`/api/games/${code}/finalize`, {
       method: 'POST',
