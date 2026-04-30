@@ -1,0 +1,236 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --mario-red: #E52521;
+  --mario-blue: #5C94FC;
+  --mario-yellow: #FBD000;
+  --mario-green: #43B047;
+  --mario-brown: #8B4513;
+  --mario-sky: #6B8CFF;
+}
+
+html, body, #app {
+  height: 100%;
+  font-family: 'Roboto', system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at top, #88B8FF 0%, #5C94FC 40%, #4A7DD9 100%);
+  min-height: 100vh;
+  background-attachment: fixed;
+}
+
+.pixel {
+  font-family: 'Press Start 2P', monospace;
+  letter-spacing: 0.05em;
+}
+
+.cloud {
+  position: absolute;
+  background: white;
+  border-radius: 50px;
+  opacity: 0.85;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 0 rgba(0,0,0,0.1));
+}
+
+.brick-bg {
+  background-image:
+    linear-gradient(90deg, transparent 49%, rgba(0,0,0,0.15) 49%, rgba(0,0,0,0.15) 51%, transparent 51%),
+    linear-gradient(0deg, transparent 49%, rgba(0,0,0,0.15) 49%, rgba(0,0,0,0.15) 51%, transparent 51%);
+  background-size: 40px 40px;
+  background-color: #C84B25;
+}
+
+.mario-block {
+  background: linear-gradient(180deg, #FBD000 0%, #E5A800 100%);
+  border: 4px solid #8B4513;
+  border-radius: 8px;
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.3),
+    inset -4px -4px 0 rgba(0,0,0,0.2),
+    0 6px 0 #5A2D0C,
+    0 8px 12px rgba(0,0,0,0.3);
+  font-family: 'Press Start 2P', monospace;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.mario-block:active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.3),
+    inset -4px -4px 0 rgba(0,0,0,0.2),
+    0 2px 0 #5A2D0C,
+    0 3px 6px rgba(0,0,0,0.3);
+}
+
+.pipe {
+  background: linear-gradient(180deg, #43B047 0%, #2A8C30 100%);
+  border: 4px solid #1A6020;
+  border-radius: 12px;
+  box-shadow:
+    inset 6px 0 0 rgba(255,255,255,0.2),
+    inset -6px 0 0 rgba(0,0,0,0.2);
+}
+
+.coin-glow {
+  text-shadow:
+    0 0 8px #FBD000,
+    0 0 16px #FBD000,
+    2px 2px 0 #8B4513;
+  color: #FBD000;
+}
+
+.btn-mario {
+  background: linear-gradient(180deg, #E52521 0%, #B01612 100%);
+  border: 4px solid #6B0A08;
+  border-radius: 8px;
+  color: white;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.875rem;
+  padding: 14px 24px;
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.25),
+    inset -4px -4px 0 rgba(0,0,0,0.25),
+    0 6px 0 #4A0706;
+  transition: transform 0.08s, box-shadow 0.08s;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.btn-mario:active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.25),
+    inset -4px -4px 0 rgba(0,0,0,0.25),
+    0 2px 0 #4A0706;
+}
+
+.btn-mario:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-green {
+  background: linear-gradient(180deg, #43B047 0%, #2A8C30 100%);
+  border-color: #1A5A20;
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.25),
+    inset -4px -4px 0 rgba(0,0,0,0.25),
+    0 6px 0 #103A12;
+}
+
+.btn-green:active {
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.25),
+    inset -4px -4px 0 rgba(0,0,0,0.25),
+    0 2px 0 #103A12;
+}
+
+.btn-blue {
+  background: linear-gradient(180deg, #5C94FC 0%, #3A6FCC 100%);
+  border-color: #1F4A99;
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.25),
+    inset -4px -4px 0 rgba(0,0,0,0.25),
+    0 6px 0 #143666;
+}
+
+.btn-blue:active {
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.25),
+    inset -4px -4px 0 rgba(0,0,0,0.25),
+    0 2px 0 #143666;
+}
+
+.btn-yellow {
+  background: linear-gradient(180deg, #FBD000 0%, #C9A500 100%);
+  border-color: #806800;
+  color: #4A2D00;
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.25),
+    inset -4px -4px 0 rgba(0,0,0,0.25),
+    0 6px 0 #4A3D00;
+}
+
+.btn-yellow:active {
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.25),
+    inset -4px -4px 0 rgba(0,0,0,0.25),
+    0 2px 0 #4A3D00;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.96);
+  border: 4px solid #2A2A9A;
+  border-radius: 12px;
+  box-shadow:
+    inset 4px 4px 0 rgba(255,255,255,0.5),
+    0 8px 0 #1A1A6A,
+    0 12px 24px rgba(0,0,0,0.3);
+}
+
+.input-mario {
+  width: 100%;
+  padding: 12px 16px;
+  border: 4px solid #2A2A9A;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: 'Roboto', sans-serif;
+  background: white;
+  outline: none;
+}
+
+.input-mario:focus {
+  border-color: #E52521;
+  box-shadow: 0 0 0 4px rgba(229, 37, 33, 0.2);
+}
+
+@keyframes coin-spin {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.coin-spin {
+  display: inline-block;
+  animation: coin-spin 1.5s linear infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.float {
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 208, 0, 0.6); }
+  50% { box-shadow: 0 0 0 12px rgba(251, 208, 0, 0); }
+}
+
+.pulse-glow {
+  animation: pulse-glow 1.5s ease-out infinite;
+}
+
+.ground {
+  background:
+    repeating-linear-gradient(90deg,
+      #C84B25 0,
+      #C84B25 38px,
+      #8B3318 38px,
+      #8B3318 40px),
+    repeating-linear-gradient(0deg,
+      #C84B25 0,
+      #C84B25 38px,
+      #8B3318 38px,
+      #8B3318 40px);
+  border-top: 4px solid #5A2010;
+}
